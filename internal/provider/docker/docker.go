@@ -309,7 +309,10 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	result, err := i.runExec(execCtx, cmd, opts)
 	if err != nil {
 		if execCtx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("execution timed out after %v: %w\n\nTip: You can increase the timeout using the -timeout flag (e.g., -timeout 10m)", opts.Timeout, err)
+			if opts.Timeout > 0 {
+				return nil, fmt.Errorf("execution timed out after %v: %v\n\nTip: You can increase the timeout using the -timeout flag (e.g., -timeout 10m)", opts.Timeout, err)
+			}
+			return nil, fmt.Errorf("execution timed out: %v\n\nTip: You can set a timeout using the -timeout flag (e.g., -timeout 5m)", err)
 		}
 		return nil, err
 	}

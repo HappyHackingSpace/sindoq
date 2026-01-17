@@ -4,6 +4,7 @@ package sindoq
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Sentinel errors for common conditions.
@@ -46,11 +47,12 @@ type ProviderNotFoundError struct {
 }
 
 func (e *ProviderNotFoundError) Error() string {
-	msg := fmt.Sprintf("provider %q not found\n\nAvailable providers:\n", e.Name)
+	var buf strings.Builder
+	fmt.Fprintf(&buf, "provider %q not found\n\nAvailable providers:\n", e.Name)
 	for _, p := range e.Available {
-		msg += fmt.Sprintf("  - %s\n", p)
+		fmt.Fprintf(&buf, "  - %s\n", p)
 	}
-	return msg
+	return buf.String()
 }
 
 // SandboxError wraps errors with context.
