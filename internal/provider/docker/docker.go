@@ -173,32 +173,39 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 
 // ensureImage pulls the image if it doesn't exist locally.
 func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
-	// Check if image exists locally
 	_, err := p.client.ImageInspect(ctx, imageName)
 	if err == nil {
-		return nil // Image exists
+		return nil
 	}
 
 	if !client.IsErrNotFound(err) {
-		// If error is not "not found", it might be connection error
-		if strings.Contains(err.Error(), "Cannot connect") || strings.Contains(err.Error(), "connection refused") {
+		if isDockerConnectionError(err) {
 			return fmt.Errorf("docker connection failed: %w\n\nTroubleshooting:\n  - Is the Docker daemon running?\n  - Do you have permission to access /var/run/docker.sock?", err)
 		}
+		return fmt.Errorf("inspect image: %w", err)
 	}
 
-	// Pull image
 	reader, err := p.client.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
-		if strings.Contains(err.Error(), "Cannot connect") || strings.Contains(err.Error(), "connection refused") {
+		if isDockerConnectionError(err) {
 			return fmt.Errorf("docker connection failed: %w\n\nTroubleshooting:\n  - Is the Docker daemon running?\n  - Do you have permission to access /var/run/docker.sock?", err)
 		}
 		return fmt.Errorf("pull image: %w", err)
 	}
 	defer reader.Close()
 
-	// Consume output to wait for completion
-	_, err = io.Copy(io.Discard, reader)
-	return err
+	if _, err := io.Copy(io.Discard, reader); err != nil {
+		return fmt.Errorf("read image pull output: %w", err)
+	}
+	return nil
+}
+
+func isDockerConnectionError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "Cannot connect") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "permission denied") ||
+		strings.Contains(msg, "/var/run/docker.sock")
 }
 
 // Capabilities returns Docker provider capabilities.

@@ -4,7 +4,6 @@ package sindoq
 import (
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // Sentinel errors for common conditions.
@@ -39,21 +38,6 @@ var (
 	// ErrProviderNotRegistered indicates provider is not registered.
 	ErrProviderNotRegistered = errors.New("provider not registered")
 )
-
-// ProviderNotFoundError supplies suggestions when a provider is missing.
-type ProviderNotFoundError struct {
-	Name      string
-	Available []string
-}
-
-func (e *ProviderNotFoundError) Error() string {
-	var buf strings.Builder
-	fmt.Fprintf(&buf, "provider %q not found\n\nAvailable providers:\n", e.Name)
-	for _, p := range e.Available {
-		fmt.Fprintf(&buf, "  - %s\n", p)
-	}
-	return buf.String()
-}
 
 // SandboxError wraps errors with context.
 type SandboxError struct {

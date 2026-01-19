@@ -1,8 +1,6 @@
 module github.com/happyhackingspace/sindoq
 
-go 1.24.2 //in my pc, i have that go version installed
-
-toolchain go1.24.11
+go 1.25
 
 require (
 	github.com/docker/docker v28.5.2+incompatible
@@ -64,7 +62,7 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	go.mongodb.org/mongo-driver v1.17.6 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.64.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.39.0 // indirect
 	go.opentelemetry.io/otel/metric v1.39.0 // indirect

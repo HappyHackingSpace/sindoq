@@ -23,6 +23,21 @@ import (
 	// nsjail, gvisor, and firecracker are imported in providers_linux.go (Linux only)
 )
 
+type outputFormat string
+
+const (
+	outputText outputFormat = "text"
+	outputJSON outputFormat = "json"
+)
+
+type ExecutionOutput struct {
+	ExitCode   int    `json:"exit_code"`
+	Stdout     string `json:"stdout"`
+	Stderr     string `json:"stderr"`
+	DurationMs int64  `json:"duration_ms"`
+	Language   string `json:"language"`
+}
+
 // Go's flag package stops parsing at first non-flag arg, so we reorder to allow flags anywhere
 func reorderArgs() {
 	args := os.Args[1:]
@@ -117,7 +132,11 @@ Environment Variables:
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
 	defer cancel()
 
-	if err := executeCode(ctx, code, *provider, *language, *stream, *jsonFormat); err != nil {
+	format := outputText
+	if *jsonFormat {
+		format = outputJSON
+	}
+	if err := executeCode(ctx, code, *provider, *language, *stream, format); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -175,7 +194,7 @@ func listLanguages() {
 	}
 }
 
-func executeCode(ctx context.Context, code, providerName, language string, stream, jsonFormat bool) error {
+func executeCode(ctx context.Context, code, providerName, language string, stream bool, format outputFormat) error {
 	if language == "" {
 		detector := langdetect.New()
 		result := detector.Detect(code, langdetect.DefaultDetectOptions())
@@ -213,9 +232,7 @@ func executeCode(ctx context.Context, code, providerName, language string, strea
 		execOpts = append(execOpts, sindoq.WithLanguage(language))
 	}
 
-	start := time.Now()
-
-	if stream && !jsonFormat {
+	if stream && format != outputJSON {
 		return sb.ExecuteStream(ctx, code, func(e *executor.StreamEvent) error {
 			switch e.Type {
 			case executor.StreamStdout:
@@ -229,38 +246,22 @@ func executeCode(ctx context.Context, code, providerName, language string, strea
 		}, execOpts...)
 	}
 
+	start := time.Now()
 	result, err := sb.Execute(ctx, code, execOpts...)
 	if err != nil {
 		return err
 	}
 
-	if jsonFormat {
-		output := struct {
-			ExitCode   int    `json:"exit_code"`
-			Stdout     string `json:"stdout"`
-			Stderr     string `json:"stderr"`
-			DurationMs int64  `json:"duration_ms"`
-			Language   string `json:"language"`
-		}{
-			ExitCode:   result.ExitCode,
-			Stdout:     result.Stdout,
-			Stderr:     result.Stderr,
-			DurationMs: time.Since(start).Milliseconds(),
-			Language:   language,
-		}
+	output := ExecutionOutput{
+		ExitCode:   result.ExitCode,
+		Stdout:     result.Stdout,
+		Stderr:     result.Stderr,
+		DurationMs: time.Since(start).Milliseconds(),
+		Language:   language,
+	}
 
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		if err := enc.Encode(output); err != nil {
-			return err
-		}
-	} else {
-		if result.Stdout != "" {
-			fmt.Print(result.Stdout)
-		}
-		if result.Stderr != "" {
-			fmt.Fprint(os.Stderr, result.Stderr)
-		}
+	if err := writeOutput(output, format); err != nil {
+		return err
 	}
 
 	if result.ExitCode != 0 {
@@ -268,4 +269,21 @@ func executeCode(ctx context.Context, code, providerName, language string, strea
 	}
 
 	return nil
+}
+
+func writeOutput(output ExecutionOutput, format outputFormat) error {
+	switch format {
+	case outputJSON:
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(output)
+	default:
+		if output.Stdout != "" {
+			fmt.Print(output.Stdout)
+		}
+		if output.Stderr != "" {
+			fmt.Fprint(os.Stderr, output.Stderr)
+		}
+		return nil
+	}
 }
