@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
-	github.com/go-enry/go-enry/v2 v2.9.3
+	github.com/go-enry/go-enry/v2 v2.9.4
 )
 
 require (
