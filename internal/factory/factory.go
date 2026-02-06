@@ -2,7 +2,9 @@ package factory
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/happyhackingspace/sindoq/internal/provider"
 )
@@ -28,6 +30,20 @@ func NewDefaultFactory() *SandboxFactory {
 
 // CreateSandbox creates a sandbox using the specified provider.
 func (f *SandboxFactory) CreateSandbox(ctx context.Context, providerName string, providerConfig any, opts *provider.CreateOptions) (provider.Instance, error) {
+	if !f.registry.IsRegistered(providerName) {
+		available := f.registry.Available()
+		var buf strings.Builder
+		fmt.Fprintf(&buf, "provider %q not found\n\nAvailable providers:\n", providerName)
+		for _, p := range available {
+			if p == "docker" {
+				fmt.Fprintf(&buf, "  - %s (default)\n", p)
+			} else {
+				fmt.Fprintf(&buf, "  - %s\n", p)
+			}
+		}
+		return nil, errors.New(buf.String())
+	}
+
 	p, err := f.registry.Get(providerName, providerConfig)
 	if err != nil {
 		return nil, fmt.Errorf("get provider: %w", err)

@@ -173,22 +173,39 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 
 // ensureImage pulls the image if it doesn't exist locally.
 func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
-	// Check if image exists
 	_, err := p.client.ImageInspect(ctx, imageName)
 	if err == nil {
-		return nil // Image exists
+		return nil
 	}
 
-	// Pull image
+	if !client.IsErrNotFound(err) {
+		if isDockerConnectionError(err) {
+			return fmt.Errorf("docker connection failed: %w\n\nTroubleshooting:\n  - Is the Docker daemon running?\n  - Do you have permission to access /var/run/docker.sock?", err)
+		}
+		return fmt.Errorf("inspect image: %w", err)
+	}
+
 	reader, err := p.client.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
+		if isDockerConnectionError(err) {
+			return fmt.Errorf("docker connection failed: %w\n\nTroubleshooting:\n  - Is the Docker daemon running?\n  - Do you have permission to access /var/run/docker.sock?", err)
+		}
 		return fmt.Errorf("pull image: %w", err)
 	}
 	defer reader.Close()
 
-	// Consume output to wait for completion
-	_, err = io.Copy(io.Discard, reader)
-	return err
+	if _, err := io.Copy(io.Discard, reader); err != nil {
+		return fmt.Errorf("read image pull output: %w", err)
+	}
+	return nil
+}
+
+func isDockerConnectionError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "Cannot connect") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "permission denied") ||
+		strings.Contains(msg, "/var/run/docker.sock")
 }
 
 // Capabilities returns Docker provider capabilities.
@@ -298,6 +315,12 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	// Run the code
 	result, err := i.runExec(execCtx, cmd, opts)
 	if err != nil {
+		if execCtx.Err() == context.DeadlineExceeded {
+			if opts.Timeout > 0 {
+				return nil, fmt.Errorf("execution timed out after %v: %v\n\nTip: You can increase the timeout using the -timeout flag (e.g., -timeout 10m)", opts.Timeout, err)
+			}
+			return nil, fmt.Errorf("execution timed out: %v\n\nTip: You can set a timeout using the -timeout flag (e.g., -timeout 5m)", err)
+		}
 		return nil, err
 	}
 
