@@ -159,6 +159,22 @@ func WithWasmerConfig(cfg WasmerConfig) Option {
 	}
 }
 
+// WithLandlockConfig configures Landlock provider.
+func WithLandlockConfig(cfg LandlockConfig) Option {
+	return func(c *Config) {
+		c.Provider = "landlock"
+		c.ProviderConfig = cfg
+	}
+}
+
+// WithSeatbeltConfig configures Seatbelt provider.
+func WithSeatbeltConfig(cfg SeatbeltConfig) Option {
+	return func(c *Config) {
+		c.Provider = "seatbelt"
+		c.ProviderConfig = cfg
+	}
+}
+
 // WithTimeout sets the default execution timeout.
 func WithTimeout(d time.Duration) Option {
 	return func(c *Config) {
@@ -391,6 +407,68 @@ type WasmerConfig struct {
 
 	// EnableNetwork allows network access via WASI.
 	EnableNetwork bool
+}
+
+// LandlockConfig configures Landlock provider.
+// Landlock requires Linux with kernel 5.13+.
+type LandlockConfig struct {
+	// ABIVersion is the Landlock ABI version to target.
+	ABIVersion int
+
+	// BestEffort degrades gracefully on older kernels.
+	BestEffort bool
+
+	// IgnoreIfMissing skips paths that don't exist.
+	IgnoreIfMissing bool
+
+	// TimeLimit is the maximum execution time in seconds.
+	TimeLimit uint32
+
+	// ReadPaths are paths to allow read access (files).
+	ReadPaths []string
+
+	// ReadExecPaths are paths to allow read and execute access (directories).
+	ReadExecPaths []string
+
+	// WritePaths are paths to allow read-write access (directories).
+	WritePaths []string
+
+	// WriteExecPaths are paths to allow read-write-execute access (directories).
+	WriteExecPaths []string
+
+	// NetworkConnectPorts are TCP ports allowed for outbound connections.
+	NetworkConnectPorts []int
+
+	// NetworkBindPorts are TCP ports allowed for binding.
+	NetworkBindPorts []int
+
+	// EnableNetwork allows all network access.
+	EnableNetwork bool
+}
+
+// SeatbeltConfig configures Seatbelt provider.
+// Seatbelt requires macOS 10.5+.
+type SeatbeltConfig struct {
+	// TimeLimit is the maximum execution time in seconds.
+	TimeLimit uint32
+
+	// ReadPaths are paths to allow read access.
+	ReadPaths []string
+
+	// ReadExecPaths are paths to allow read and execute access.
+	ReadExecPaths []string
+
+	// WritePaths are paths to allow write access.
+	WritePaths []string
+
+	// EnableNetwork allows network access.
+	EnableNetwork bool
+
+	// AllowMachLookup allows Mach IPC lookups for essential services.
+	AllowMachLookup bool
+
+	// CustomProfile is an optional full SBPL profile string that overrides generation.
+	CustomProfile string
 }
 
 // ExecuteOption configures a single execution.

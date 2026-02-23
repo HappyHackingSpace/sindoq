@@ -6,6 +6,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
 	github.com/go-enry/go-enry/v2 v2.9.4
+	github.com/landlock-lsm/go-landlock v0.7.0
 )
 
 require (
@@ -76,4 +77,5 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gotest.tools/v3 v3.5.2 // indirect
+	kernel.org/pub/linux/libs/security/libcap/psx v1.2.77 // indirect
 )

@@ -91,7 +91,7 @@
 
 ## Features
 
-- **Multi-provider support**: Docker, Podman, Wasmer, nsjail, gVisor, Firecracker, Kubernetes, Vercel, E2B
+- **Multi-provider support**: Docker, Podman, Wasmer, nsjail, gVisor, Firecracker, Landlock, Seatbelt, Kubernetes, Vercel, E2B
 - **Auto language detection**: Automatically detects programming language from code
 - **Streaming output**: Real-time stdout/stderr streaming
 - **Async execution**: Non-blocking execution with channels
@@ -161,6 +161,8 @@ fmt.Println(result.Stdout)
 | `nsjail` | Local | Ultra-fast process isolation (~5ms, Linux only) |
 | `gvisor` | Local | Strong isolation, syscall filtering (Linux only) |
 | `firecracker` | Local | Maximum isolation (microVMs, Linux only) |
+| `landlock` | Local | Kernel-level sandboxing via Landlock LSM (Linux 5.13+) |
+| `seatbelt` | Local | Kernel-level sandboxing via sandbox-exec (macOS) |
 | `kubernetes` | Cloud | Scalable workloads |
 | `vercel` | Cloud | Serverless execution |
 | `e2b` | Cloud | AI code interpreter |
@@ -187,6 +189,16 @@ sb, _ := sindoq.Create(ctx, sindoq.WithE2BConfig(sindoq.E2BConfig{
 sb, _ := sindoq.Create(ctx, sindoq.WithWasmerConfig(sindoq.WasmerConfig{
     WasmerPath: "wasmer",
     TimeLimit:  30,
+}))
+
+// Seatbelt (macOS)
+sb, _ := sindoq.Create(ctx, sindoq.WithSeatbeltConfig(sindoq.SeatbeltConfig{
+    EnableNetwork: false,
+}))
+
+// Landlock (Linux 5.13+)
+sb, _ := sindoq.Create(ctx, sindoq.WithLandlockConfig(sindoq.LandlockConfig{
+    BestEffort: true,
 }))
 ```
 
@@ -260,6 +272,12 @@ sindoq -provider vercel 'print("Hello")'
 # Use Wasmer (works on Linux, macOS, Windows)
 sindoq -provider wasmer 'print("Hello from WASM!")'
 sindoq -provider wasmer -lang javascript 'console.log("Hello from QuickJS!")'
+
+# Use Seatbelt (macOS native sandboxing)
+sindoq -provider seatbelt 'print("Hello from Seatbelt!")'
+
+# Use Landlock (Linux native sandboxing, kernel 5.13+)
+sindoq -provider landlock 'print("Hello from Landlock!")'
 
 # Pipe input
 echo 'puts "Hello"' | sindoq -lang ruby

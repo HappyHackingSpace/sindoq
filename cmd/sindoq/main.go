@@ -63,7 +63,7 @@ func reorderArgs() {
 }
 
 func main() {
-	provider := flag.String("provider", "docker", "Provider to use (docker, podman, wasmer, nsjail, gvisor, firecracker, kubernetes, vercel, e2b)")
+	provider := flag.String("provider", "docker", "Provider to use (docker, podman, wasmer, nsjail, gvisor, firecracker, landlock, seatbelt, kubernetes, vercel, e2b)")
 	language := flag.String("lang", "", "Language (auto-detected if not specified)")
 	timeout := flag.Duration("timeout", 5*time.Minute, "Execution timeout")
 	stream := flag.Bool("stream", false, "Stream output in real-time")
