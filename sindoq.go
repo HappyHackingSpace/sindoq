@@ -28,6 +28,14 @@ import (
 	"github.com/happyhackingspace/sindoq/pkg/executor"
 	"github.com/happyhackingspace/sindoq/pkg/fs"
 	"github.com/happyhackingspace/sindoq/pkg/langdetect"
+
+	// Register cross-platform providers so they are available when using sindoq as a library.
+	_ "github.com/happyhackingspace/sindoq/internal/provider/docker"
+	_ "github.com/happyhackingspace/sindoq/internal/provider/e2b"
+	_ "github.com/happyhackingspace/sindoq/internal/provider/kubernetes"
+	_ "github.com/happyhackingspace/sindoq/internal/provider/podman"
+	_ "github.com/happyhackingspace/sindoq/internal/provider/vercel"
+	_ "github.com/happyhackingspace/sindoq/internal/provider/wasmer"
 )
 
 // Sandbox represents an isolated code execution environment.
