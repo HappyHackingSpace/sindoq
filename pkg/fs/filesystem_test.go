@@ -154,9 +154,7 @@ var _ FileSystem = (*mockFileSystem)(nil)
 
 func TestFileSystemInterface(t *testing.T) {
 	var fs FileSystem = &mockFileSystem{}
-	if fs == nil {
-		t.Error("mockFileSystem should implement FileSystem")
-	}
+	_ = fs // interface compliance verified by compile-time check above
 }
 
 // mockWatcher implements Watcher interface
@@ -171,9 +169,7 @@ var _ Watcher = (*mockWatcher)(nil)
 
 func TestWatcherInterface(t *testing.T) {
 	var w Watcher = &mockWatcher{}
-	if w == nil {
-		t.Error("mockWatcher should implement Watcher")
-	}
+	_ = w // interface compliance verified by compile-time check above
 }
 
 // mockWatchableFileSystem implements WatchableFileSystem
@@ -186,7 +182,5 @@ var _ WatchableFileSystem = (*mockWatchableFileSystem)(nil)
 
 func TestWatchableFileSystemInterface(t *testing.T) {
 	var wfs WatchableFileSystem = &mockWatchableFileSystem{}
-	if wfs == nil {
-		t.Error("mockWatchableFileSystem should implement WatchableFileSystem")
-	}
+	_ = wfs // interface compliance verified by compile-time check above
 }

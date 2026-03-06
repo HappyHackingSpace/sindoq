@@ -52,7 +52,7 @@ func runWithProvider(ctx context.Context, provider, code string, opts ...sindoq.
 		fmt.Printf("Error creating sandbox: %v\n", err)
 		return
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	fmt.Printf("Sandbox ID: %s\n", sb.ID())
 

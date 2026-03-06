@@ -70,7 +70,7 @@ func TestNewOutputStream(t *testing.T) {
 
 func TestOutputStreamWrite(t *testing.T) {
 	stream := NewOutputStream(10, StreamStdout)
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	data := []byte("Hello, World!")
 	n, err := stream.Write(data)
@@ -98,7 +98,7 @@ func TestOutputStreamWrite(t *testing.T) {
 
 func TestOutputStreamWriteAfterClose(t *testing.T) {
 	stream := NewOutputStream(10, StreamStdout)
-	stream.Close()
+	_ = stream.Close()
 
 	_, err := stream.Write([]byte("test"))
 	if err != io.ErrClosedPipe {
@@ -108,7 +108,7 @@ func TestOutputStreamWriteAfterClose(t *testing.T) {
 
 func TestOutputStreamWriteEvent(t *testing.T) {
 	stream := NewOutputStream(10, StreamStdout)
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	event := &StreamEvent{
 		Type:      StreamStderr,
@@ -133,7 +133,7 @@ func TestOutputStreamWriteEvent(t *testing.T) {
 
 func TestOutputStreamWriteEventAfterClose(t *testing.T) {
 	stream := NewOutputStream(10, StreamStdout)
-	stream.Close()
+	_ = stream.Close()
 
 	err := stream.WriteEvent(&StreamEvent{Type: StreamStdout, Data: "test"})
 	if err != io.ErrClosedPipe {
@@ -143,7 +143,7 @@ func TestOutputStreamWriteEventAfterClose(t *testing.T) {
 
 func TestOutputStreamOnEvent(t *testing.T) {
 	stream := NewOutputStream(10, StreamStdout)
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	var receivedEvents []*StreamEvent
 	var mu sync.Mutex
@@ -155,8 +155,8 @@ func TestOutputStreamOnEvent(t *testing.T) {
 		return nil
 	})
 
-	stream.Write([]byte("line 1"))
-	stream.Write([]byte("line 2"))
+	_, _ = stream.Write([]byte("line 1"))
+	_, _ = stream.Write([]byte("line 2"))
 
 	// Wait a bit for handlers to process
 	time.Sleep(50 * time.Millisecond)
@@ -215,7 +215,7 @@ func TestNewMultiStreamWriter(t *testing.T) {
 
 func TestMultiStreamWriterStdout(t *testing.T) {
 	msw := NewMultiStreamWriter(10)
-	defer msw.Close()
+	defer func() { _ = msw.Close() }()
 
 	stdout := msw.Stdout()
 	if stdout == nil {
@@ -233,7 +233,7 @@ func TestMultiStreamWriterStdout(t *testing.T) {
 
 func TestMultiStreamWriterStderr(t *testing.T) {
 	msw := NewMultiStreamWriter(10)
-	defer msw.Close()
+	defer func() { _ = msw.Close() }()
 
 	stderr := msw.Stderr()
 	if stderr == nil {
@@ -251,7 +251,7 @@ func TestMultiStreamWriterStderr(t *testing.T) {
 
 func TestMultiStreamWriterEvents(t *testing.T) {
 	msw := NewMultiStreamWriter(10)
-	defer msw.Close()
+	defer func() { _ = msw.Close() }()
 
 	events := msw.Events()
 	if events == nil {
@@ -259,8 +259,8 @@ func TestMultiStreamWriterEvents(t *testing.T) {
 	}
 
 	// Write to both streams
-	msw.Stdout().Write([]byte("out"))
-	msw.Stderr().Write([]byte("err"))
+	_, _ = msw.Stdout().Write([]byte("out"))
+	_, _ = msw.Stderr().Write([]byte("err"))
 
 	// Give time for forwarding
 	time.Sleep(100 * time.Millisecond)
@@ -288,7 +288,7 @@ loop:
 
 func TestMultiStreamWriterOnEvent(t *testing.T) {
 	msw := NewMultiStreamWriter(10)
-	defer msw.Close()
+	defer func() { _ = msw.Close() }()
 
 	var receivedEvents []*StreamEvent
 	var mu sync.Mutex
@@ -300,8 +300,8 @@ func TestMultiStreamWriterOnEvent(t *testing.T) {
 		return nil
 	})
 
-	msw.Stdout().Write([]byte("stdout"))
-	msw.Stderr().Write([]byte("stderr"))
+	_, _ = msw.Stdout().Write([]byte("stdout"))
+	_, _ = msw.Stderr().Write([]byte("stderr"))
 
 	// Wait for handlers
 	time.Sleep(50 * time.Millisecond)
@@ -352,7 +352,7 @@ func TestMultiStreamWriterClose(t *testing.T) {
 
 func TestOutputStreamConcurrent(t *testing.T) {
 	stream := NewOutputStream(100, StreamStdout)
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
@@ -360,7 +360,7 @@ func TestOutputStreamConcurrent(t *testing.T) {
 		go func(id int) {
 			defer wg.Done()
 			for j := 0; j < 10; j++ {
-				stream.Write([]byte("data"))
+				_, _ = stream.Write([]byte("data"))
 			}
 		}(i)
 	}

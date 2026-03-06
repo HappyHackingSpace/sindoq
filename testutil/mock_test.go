@@ -496,7 +496,7 @@ func TestMockInstance_Concurrent(t *testing.T) {
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func() {
-			inst.Execute(context.Background(), "code", nil)
+			_, _ = inst.Execute(context.Background(), "code", nil)
 			done <- true
 		}()
 	}

@@ -225,7 +225,7 @@ func executeCode(ctx context.Context, code, providerName, language string, strea
 	if err != nil {
 		return fmt.Errorf("creating sandbox: %w", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	var execOpts []sindoq.ExecuteOption
 	if language != "" {

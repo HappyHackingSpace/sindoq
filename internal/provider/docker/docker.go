@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
@@ -54,7 +55,6 @@ func DefaultConfig() *Config {
 type Provider struct {
 	config *Config
 	client *client.Client
-	mu     sync.RWMutex
 }
 
 // New creates a new Docker provider.
@@ -158,7 +158,7 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 	// Start container
 	if err := p.client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		// Clean up on failure
-		p.client.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
+		_ = p.client.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
 		return nil, fmt.Errorf("start container: %w", err)
 	}
 
@@ -178,7 +178,7 @@ func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
 		return nil
 	}
 
-	if !client.IsErrNotFound(err) {
+	if !cerrdefs.IsNotFound(err) {
 		if isDockerConnectionError(err) {
 			return fmt.Errorf("docker connection failed: %w\n\nTroubleshooting:\n  - Is the Docker daemon running?\n  - Do you have permission to access /var/run/docker.sock?", err)
 		}
@@ -192,7 +192,7 @@ func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
 		}
 		return fmt.Errorf("pull image: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	if _, err := io.Copy(io.Discard, reader); err != nil {
 		return fmt.Errorf("read image pull output: %w", err)
@@ -292,14 +292,17 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	// Build command
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		// Compile step
-		compileCmd := append(runtimeInfo.CompileCmd, codePath)
+		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileCmd, runtimeInfo.CompileCmd)
+		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return nil, fmt.Errorf("compile: %w", err)
 		}
 		cmd = runtimeInfo.RunCommand
 	} else {
-		cmd = append(runtimeInfo.RunCommand, codePath)
+		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(cmd, runtimeInfo.RunCommand)
+		cmd[len(runtimeInfo.RunCommand)] = codePath
 	}
 
 	// Set timeout
@@ -359,8 +362,8 @@ func (i *Instance) runExec(ctx context.Context, cmd []string, opts *executor.Exe
 	// Write stdin if provided
 	if opts.Stdin != "" {
 		go func() {
-			resp.Conn.Write([]byte(opts.Stdin))
-			resp.CloseWrite()
+			_, _ = resp.Conn.Write([]byte(opts.Stdin))
+			_ = resp.CloseWrite()
 		}()
 	}
 
@@ -391,7 +394,7 @@ func (i *Instance) writeFile(ctx context.Context, path string, content []byte) e
 	if err := tw.WriteFile(path, content); err != nil {
 		return err
 	}
-	tw.Close()
+	_ = tw.Close()
 
 	// Get directory
 	dir := path[:strings.LastIndex(path, "/")]
@@ -435,13 +438,17 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	// Build command
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := append(runtimeInfo.CompileCmd, codePath)
+		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileCmd, runtimeInfo.CompileCmd)
+		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return fmt.Errorf("compile: %w", err)
 		}
 		cmd = runtimeInfo.RunCommand
 	} else {
-		cmd = append(runtimeInfo.RunCommand, codePath)
+		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(cmd, runtimeInfo.RunCommand)
+		cmd[len(runtimeInfo.RunCommand)] = codePath
 	}
 
 	execConfig := container.ExecOptions{
@@ -467,9 +474,9 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	stderrReader, stderrWriter := io.Pipe()
 
 	go func() {
-		stdcopy.StdCopy(stdoutWriter, stderrWriter, resp.Reader)
-		stdoutWriter.Close()
-		stderrWriter.Close()
+		_, _ = stdcopy.StdCopy(stdoutWriter, stderrWriter, resp.Reader)
+		_ = stdoutWriter.Close()
+		_ = stderrWriter.Close()
 	}()
 
 	var wg sync.WaitGroup
@@ -482,7 +489,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stdoutReader.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStdout,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -501,7 +508,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stderrReader.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStderr,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -522,7 +529,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	// Send completion event
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  inspectResp.ExitCode,
 		Timestamp: time.Now(),

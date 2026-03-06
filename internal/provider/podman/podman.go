@@ -90,8 +90,7 @@ func (p *Provider) Close() error {
 
 // Instance represents a Podman container sandbox.
 type Instance struct {
-	id       string
-	provider *Provider
+	id string
 }
 
 // ID returns the container ID.

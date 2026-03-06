@@ -318,7 +318,9 @@ func (i *Instance) executeViaSSH(ctx context.Context, code string, runtimeInfo *
 
 	// Write code to file
 	writeCmd := fmt.Sprintf("cat > /tmp/%s << 'SINDOQ_EOF'\n%s\nSINDOQ_EOF", codeFilename, code)
-	sshWriteArgs := append(sshArgs, writeCmd)
+	sshWriteArgs := make([]string, len(sshArgs)+1)
+	copy(sshWriteArgs, sshArgs)
+	sshWriteArgs[len(sshArgs)] = writeCmd
 
 	writeExec := exec.CommandContext(ctx, "ssh", sshWriteArgs...)
 	if err := writeExec.Run(); err != nil {
@@ -327,12 +329,19 @@ func (i *Instance) executeViaSSH(ctx context.Context, code string, runtimeInfo *
 
 	// Build run command
 	var runCmd string
+	codePath := "/tmp/" + codeFilename
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := strings.Join(append(runtimeInfo.CompileCmd, "/tmp/"+codeFilename), " ")
+		compileParts := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileParts, runtimeInfo.CompileCmd)
+		compileParts[len(runtimeInfo.CompileCmd)] = codePath
+		compileCmd := strings.Join(compileParts, " ")
 		execCmd := strings.Join(runtimeInfo.RunCommand, " ")
 		runCmd = fmt.Sprintf("%s && %s", compileCmd, execCmd)
 	} else {
-		runCmd = strings.Join(append(runtimeInfo.RunCommand, "/tmp/"+codeFilename), " ")
+		runParts := make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(runParts, runtimeInfo.RunCommand)
+		runParts[len(runtimeInfo.RunCommand)] = codePath
+		runCmd = strings.Join(runParts, " ")
 	}
 
 	// Add stdin handling
@@ -349,7 +358,9 @@ func (i *Instance) executeViaSSH(ctx context.Context, code string, runtimeInfo *
 		runCmd = envPrefix + runCmd
 	}
 
-	sshRunArgs := append(sshArgs, runCmd)
+	sshRunArgs := make([]string, len(sshArgs)+1)
+	copy(sshRunArgs, sshArgs)
+	sshRunArgs[len(sshArgs)] = runCmd
 	runExec := exec.CommandContext(ctx, "ssh", sshRunArgs...)
 
 	var stdout, stderr bytes.Buffer
@@ -415,24 +426,35 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	writeCmd := fmt.Sprintf("cat > /tmp/%s << 'SINDOQ_EOF'\n%s\nSINDOQ_EOF", codeFilename, code)
-	sshWriteArgs := append(sshArgs, writeCmd)
+	sshWriteArgs2 := make([]string, len(sshArgs)+1)
+	copy(sshWriteArgs2, sshArgs)
+	sshWriteArgs2[len(sshArgs)] = writeCmd
 
-	writeExec := exec.CommandContext(ctx, "ssh", sshWriteArgs...)
+	writeExec := exec.CommandContext(ctx, "ssh", sshWriteArgs2...)
 	if err := writeExec.Run(); err != nil {
 		return fmt.Errorf("write code to VM: %w", err)
 	}
 
 	// Build run command
 	var runCmd string
+	streamCodePath := "/tmp/" + codeFilename
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := strings.Join(append(runtimeInfo.CompileCmd, "/tmp/"+codeFilename), " ")
+		compileParts := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileParts, runtimeInfo.CompileCmd)
+		compileParts[len(runtimeInfo.CompileCmd)] = streamCodePath
+		compileCmd := strings.Join(compileParts, " ")
 		execCmd := strings.Join(runtimeInfo.RunCommand, " ")
 		runCmd = fmt.Sprintf("%s && %s", compileCmd, execCmd)
 	} else {
-		runCmd = strings.Join(append(runtimeInfo.RunCommand, "/tmp/"+codeFilename), " ")
+		runParts := make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(runParts, runtimeInfo.RunCommand)
+		runParts[len(runtimeInfo.RunCommand)] = streamCodePath
+		runCmd = strings.Join(runParts, " ")
 	}
 
-	sshRunArgs := append(sshArgs, runCmd)
+	sshRunArgs := make([]string, len(sshArgs)+1)
+	copy(sshRunArgs, sshArgs)
+	sshRunArgs[len(sshArgs)] = runCmd
 	runExec := exec.CommandContext(ctx, "ssh", sshRunArgs...)
 
 	stdoutPipe, err := runExec.StdoutPipe()
@@ -458,7 +480,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stdoutPipe.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStdout,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -477,7 +499,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stderrPipe.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStderr,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -498,7 +520,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		}
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  exitCode,
 		Timestamp: time.Now(),
@@ -603,7 +625,7 @@ func (i *Instance) Stop(ctx context.Context) error {
 
 	// Clean up socket
 	if i.socketPath != "" {
-		os.Remove(i.socketPath)
+		_ = os.Remove(i.socketPath)
 	}
 
 	// Remove from provider's instance map
@@ -794,7 +816,7 @@ func (f *firecrackerFS) Stat(ctx context.Context, path string) (*fs.FileInfo, er
 	}
 
 	var size int64
-	fmt.Sscanf(fields[1], "%d", &size)
+	_, _ = fmt.Sscanf(fields[1], "%d", &size)
 
 	return &fs.FileInfo{
 		Name:  filepath.Base(fields[0]),

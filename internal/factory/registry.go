@@ -41,7 +41,7 @@ func (r *Registry) Unregister(name string) {
 
 	// Also close and remove any cached provider
 	if p, ok := r.providers[name]; ok {
-		p.Close()
+		_ = p.Close()
 		delete(r.providers, name)
 	}
 }

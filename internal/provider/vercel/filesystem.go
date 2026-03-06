@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path/filepath"
 
 	"github.com/happyhackingspace/sindoq/pkg/fs"
 )
@@ -29,7 +28,7 @@ func (v *vercelFS) Read(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -64,7 +63,7 @@ func (v *vercelFS) Delete(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -86,7 +85,7 @@ func (v *vercelFS) List(ctx context.Context, path string) ([]fs.FileInfo, error)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -140,7 +139,7 @@ func (v *vercelFS) Stat(ctx context.Context, path string) (*fs.FileInfo, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("stat failed: %s", resp.Status)
@@ -239,7 +238,7 @@ func (v *vercelFS) Move(ctx context.Context, src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		// Fallback to copy + delete
@@ -254,8 +253,3 @@ func (v *vercelFS) Move(ctx context.Context, src, dst string) error {
 
 // Ensure vercelFS implements fs.FileSystem
 var _ fs.FileSystem = (*vercelFS)(nil)
-
-// Helper to get just the filename
-func getFilename(path string) string {
-	return filepath.Base(path)
-}

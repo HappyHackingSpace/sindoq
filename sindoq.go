@@ -181,11 +181,12 @@ func (s *sandbox) Execute(ctx context.Context, code string, opts ...ExecuteOptio
 			UseShebang:    true,
 			UseHeuristics: true,
 		})
-		if result.Language != "" {
+		switch {
+		case result.Language != "":
 			language = result.Language
-		} else if s.config.DefaultLanguage != "" {
+		case s.config.DefaultLanguage != "":
 			language = s.config.DefaultLanguage
-		} else {
+		default:
 			return nil, NewError("execute", s.providerName, s.instance.ID(), ErrLanguageDetectionFailed)
 		}
 	}
@@ -286,11 +287,12 @@ func (s *sandbox) ExecuteStream(ctx context.Context, code string, handler execut
 			UseShebang:    true,
 			UseHeuristics: true,
 		})
-		if result.Language != "" {
+		switch {
+		case result.Language != "":
 			language = result.Language
-		} else if s.config.DefaultLanguage != "" {
+		case s.config.DefaultLanguage != "":
 			language = s.config.DefaultLanguage
-		} else {
+		default:
 			return NewError("executeStream", s.providerName, s.instance.ID(), ErrLanguageDetectionFailed)
 		}
 	}
@@ -307,7 +309,7 @@ func (s *sandbox) ExecuteStream(ctx context.Context, code string, handler execut
 	}
 
 	// Emit start event
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamStart,
 		Timestamp: time.Now(),
 	})
@@ -393,7 +395,7 @@ func Execute(ctx context.Context, code string, opts ...Option) (*executor.Execut
 	if err != nil {
 		return nil, err
 	}
-	defer sb.Stop(context.Background())
+	defer func() { _ = sb.Stop(context.Background()) }()
 
 	return sb.Execute(ctx, code)
 }
@@ -404,7 +406,7 @@ func ExecuteStream(ctx context.Context, code string, handler executor.StreamHand
 	if err != nil {
 		return err
 	}
-	defer sb.Stop(context.Background())
+	defer func() { _ = sb.Stop(context.Background()) }()
 
 	return sb.ExecuteStream(ctx, code, handler)
 }

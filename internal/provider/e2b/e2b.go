@@ -100,7 +100,7 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 	if err != nil {
 		return nil, fmt.Errorf("create sandbox: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -156,7 +156,7 @@ func (p *Provider) Validate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("e2b API not accessible: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("invalid E2B API key")
@@ -224,7 +224,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	if err != nil {
 		return nil, fmt.Errorf("execute: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Stdout   string `json:"stdout"`
@@ -256,7 +256,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executor.ExecutionOptions, handler executor.StreamHandler) error {
 	result, err := i.Execute(ctx, code, opts)
 	if err != nil {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamError,
 			Error:     err,
 			Timestamp: time.Now(),
@@ -265,7 +265,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	if result.Stdout != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStdout,
 			Data:      result.Stdout,
 			Timestamp: time.Now(),
@@ -273,14 +273,14 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	if result.Stderr != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStderr,
 			Data:      result.Stderr,
 			Timestamp: time.Now(),
 		})
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  result.ExitCode,
 		Timestamp: time.Now(),
@@ -317,7 +317,7 @@ func (i *Instance) RunCommand(ctx context.Context, cmd string, args []string) (*
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Stdout   string `json:"stdout"`
@@ -367,7 +367,7 @@ func (i *Instance) Stop(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return nil
 }
@@ -391,7 +391,7 @@ func (i *Instance) Status(ctx context.Context) (provider.InstanceStatus, error) 
 	if err != nil {
 		return provider.StatusError, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return provider.StatusStopped, nil
@@ -416,7 +416,7 @@ func (f *e2bFS) Read(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return io.ReadAll(resp.Body)
 }
@@ -442,7 +442,7 @@ func (f *e2bFS) Write(ctx context.Context, path string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return nil
 }
@@ -458,7 +458,7 @@ func (f *e2bFS) Delete(ctx context.Context, path string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return nil
 }

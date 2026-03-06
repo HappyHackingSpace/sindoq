@@ -28,7 +28,7 @@ func (g *gvisorFS) Read(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("copy from container: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	tr := tar.NewReader(reader)
 	_, err = tr.Next()
@@ -46,7 +46,7 @@ func (g *gvisorFS) Write(ctx context.Context, path string, data []byte) error {
 	if err := tw.WriteFile(path, data); err != nil {
 		return err
 	}
-	tw.Close()
+	_ = tw.Close()
 
 	dir := filepath.Dir(path)
 	if dir == "" || dir == "." {
@@ -137,10 +137,10 @@ func (g *gvisorFS) Stat(ctx context.Context, path string) (*fs.FileInfo, error) 
 	}
 
 	var size int64
-	fmt.Sscanf(parts[1], "%d", &size)
+	_, _ = fmt.Sscanf(parts[1], "%d", &size)
 
 	var modTime int64
-	fmt.Sscanf(parts[3], "%d", &modTime)
+	_, _ = fmt.Sscanf(parts[3], "%d", &modTime)
 
 	return &fs.FileInfo{
 		Name:    filepath.Base(parts[0]),

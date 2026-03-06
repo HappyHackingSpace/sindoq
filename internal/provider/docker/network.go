@@ -25,7 +25,7 @@ func (n *dockerNetwork) PublishPort(ctx context.Context, port int) (*provider.Pu
 	// This is not practical for a sandbox environment.
 
 	// Return an error indicating this limitation
-	return nil, fmt.Errorf("Docker provider requires ports to be configured at sandbox creation time. " +
+	return nil, fmt.Errorf("docker provider requires ports to be configured at sandbox creation time. " +
 		"Use CreateOptions.Metadata[\"ports\"] to specify port mappings")
 }
 
@@ -60,7 +60,7 @@ func (n *dockerNetwork) ListPorts(ctx context.Context) ([]*provider.PublishedPor
 // UnpublishPort removes port exposure.
 func (n *dockerNetwork) UnpublishPort(ctx context.Context, port int) error {
 	// Cannot dynamically unpublish ports in Docker
-	return fmt.Errorf("Docker provider does not support dynamic port unpublishing")
+	return fmt.Errorf("docker provider does not support dynamic port unpublishing")
 }
 
 // Ensure dockerNetwork implements provider.Network

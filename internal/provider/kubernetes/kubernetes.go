@@ -88,10 +88,7 @@ func (p *Provider) Close() error {
 
 // Instance represents a Kubernetes pod sandbox.
 type Instance struct {
-	id        string
-	namespace string
-	podName   string
-	provider  *Provider
+	id string
 }
 
 // ID returns the instance ID.

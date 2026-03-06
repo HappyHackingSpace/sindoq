@@ -252,7 +252,7 @@ func TestFactoryClose(t *testing.T) {
 	f := NewFactory(r)
 
 	// Create to cache
-	f.GetProvider("test", nil)
+	_, _ = f.GetProvider("test", nil)
 
 	err := f.Close()
 	if err != nil {

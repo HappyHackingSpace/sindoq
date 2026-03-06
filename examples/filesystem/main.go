@@ -20,7 +20,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create sandbox: %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	fmt.Printf("Sandbox created: %s\n\n", sb.ID())
 

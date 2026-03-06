@@ -76,8 +76,8 @@ func (i *mockInstance) Execute(ctx context.Context, code string, opts *executor.
 }
 
 func (i *mockInstance) ExecuteStream(ctx context.Context, code string, opts *executor.ExecutionOptions, handler executor.StreamHandler) error {
-	handler(&executor.StreamEvent{Type: executor.StreamStdout, Data: "Hello"})
-	handler(&executor.StreamEvent{Type: executor.StreamComplete, ExitCode: 0})
+	_ = handler(&executor.StreamEvent{Type: executor.StreamStdout, Data: "Hello"})
+	_ = handler(&executor.StreamEvent{Type: executor.StreamComplete, ExitCode: 0})
 	return nil
 }
 
@@ -119,7 +119,7 @@ func TestCreate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	if sb.ID() == "" {
 		t.Error("ID() should not be empty")
@@ -142,7 +142,7 @@ func TestCreateWithOptions(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	if sb.ID() == "" {
 		t.Error("ID() should not be empty")
@@ -184,7 +184,7 @@ func TestMustCreate(t *testing.T) {
 	}()
 
 	sb := MustCreate(ctx, WithProvider("mock"))
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	if sb == nil {
 		t.Error("MustCreate() returned nil")
@@ -212,7 +212,7 @@ func TestSandboxExecute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	result, err := sb.Execute(ctx, `print("Hello")`, WithLanguage("Python"))
 	if err != nil {
@@ -239,7 +239,7 @@ func TestSandboxExecuteAutoDetect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	// Python code should auto-detect
 	code := `import json
@@ -267,7 +267,7 @@ func TestSandboxExecuteAfterStop(t *testing.T) {
 		t.Fatalf("Create() error = %v", err)
 	}
 
-	sb.Stop(ctx)
+	_ = sb.Stop(ctx)
 
 	_, err = sb.Execute(ctx, `print("Hello")`, WithLanguage("Python"))
 	if err == nil {
@@ -287,7 +287,7 @@ func TestSandboxExecuteAsync(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	results, err := sb.ExecuteAsync(ctx, `print("Hello")`, WithLanguage("Python"))
 	if err != nil {
@@ -312,7 +312,7 @@ func TestSandboxExecuteStream(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	var events []*executor.StreamEvent
 	err = sb.ExecuteStream(ctx, `print("Hello")`, func(e *executor.StreamEvent) error {
@@ -337,7 +337,7 @@ func TestSandboxRunCommand(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Create() error = %v", err)
 	}
-	defer sb.Stop(ctx)
+	defer func() { _ = sb.Stop(ctx) }()
 
 	result, err := sb.RunCommand(ctx, "ls", "-la")
 	if err != nil {
@@ -367,7 +367,7 @@ func TestSandboxStatus(t *testing.T) {
 		t.Errorf("Status() = %v, want %v", status, provider.StatusRunning)
 	}
 
-	sb.Stop(ctx)
+	_ = sb.Stop(ctx)
 
 	status, err = sb.Status(ctx)
 	if err != nil {

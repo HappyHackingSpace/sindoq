@@ -107,7 +107,7 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 	if err != nil {
 		return nil, fmt.Errorf("create sandbox: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -167,7 +167,7 @@ func (p *Provider) Validate(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("vercel API not accessible: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("vercel API returned: %s", resp.Status)
@@ -264,7 +264,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	if err != nil {
 		return nil, fmt.Errorf("execute: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		ExitCode int    `json:"exitCode"`
@@ -307,7 +307,7 @@ func (i *Instance) writeFile(ctx context.Context, path string, content []byte) e
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -323,7 +323,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	// and emit events at the end
 	result, err := i.Execute(ctx, code, opts)
 	if err != nil {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamError,
 			Error:     err,
 			Timestamp: time.Now(),
@@ -332,7 +332,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	if result.Stdout != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStdout,
 			Data:      result.Stdout,
 			Timestamp: time.Now(),
@@ -340,14 +340,14 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	}
 
 	if result.Stderr != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStderr,
 			Data:      result.Stderr,
 			Timestamp: time.Now(),
 		})
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  result.ExitCode,
 		Timestamp: time.Now(),
@@ -380,7 +380,7 @@ func (i *Instance) RunCommand(ctx context.Context, cmd string, args []string) (*
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		ExitCode int    `json:"exitCode"`
@@ -430,7 +430,7 @@ func (i *Instance) Stop(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	return nil
 }
@@ -454,7 +454,7 @@ func (i *Instance) Status(ctx context.Context) (provider.InstanceStatus, error) 
 	if err != nil {
 		return provider.StatusError, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return provider.StatusStopped, nil

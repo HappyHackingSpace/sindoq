@@ -210,8 +210,8 @@ func (m *MultiStreamWriter) Close() error {
 
 	if !m.closed {
 		m.closed = true
-		m.stdout.Close()
-		m.stderr.Close()
+		_ = m.stdout.Close()
+		_ = m.stderr.Close()
 		close(m.events)
 	}
 	return nil

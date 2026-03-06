@@ -147,7 +147,7 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 	// Create workspace inside sandbox
 	workDir := filepath.Join(sandboxDir, "workspace")
 	if err := os.MkdirAll(workDir, 0755); err != nil {
-		os.RemoveAll(sandboxDir)
+		_ = os.RemoveAll(sandboxDir)
 		return nil, fmt.Errorf("create workspace: %w", err)
 	}
 
@@ -203,7 +203,7 @@ func (p *Provider) Close() error {
 	defer p.mu.Unlock()
 
 	for _, instance := range p.instances {
-		instance.Stop(context.Background())
+		_ = instance.Stop(context.Background())
 	}
 
 	return nil
@@ -437,12 +437,12 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		compileCmd := i.buildNsjailCmd(append(runtimeInfo.CompileCmd, sandboxCodePath), opts)
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		if output, err := compileExec.CombinedOutput(); err != nil {
-			handler(&executor.StreamEvent{
+			_ = handler(&executor.StreamEvent{
 				Type:      executor.StreamStderr,
 				Data:      string(output),
 				Timestamp: time.Now(),
 			})
-			handler(&executor.StreamEvent{
+			_ = handler(&executor.StreamEvent{
 				Type:      executor.StreamComplete,
 				ExitCode:  1,
 				Timestamp: time.Now(),
@@ -479,7 +479,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stdoutPipe.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStdout,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -498,7 +498,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stderrPipe.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStderr,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -519,7 +519,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		}
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  exitCode,
 		Timestamp: time.Now(),
@@ -588,7 +588,7 @@ func (i *Instance) Stop(ctx context.Context) error {
 
 	// Clean up sandbox directory
 	if i.sandboxDir != "" {
-		os.RemoveAll(i.sandboxDir)
+		_ = os.RemoveAll(i.sandboxDir)
 	}
 
 	// Remove from provider's instance map

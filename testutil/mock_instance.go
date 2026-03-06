@@ -122,7 +122,7 @@ func (i *MockInstance) ExecuteStream(ctx context.Context, code string, opts *exe
 	// Default behavior: execute and emit events
 	result, err := i.Execute(ctx, code, opts)
 	if err != nil {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamError,
 			Error:     err,
 			Timestamp: time.Now(),
@@ -131,7 +131,7 @@ func (i *MockInstance) ExecuteStream(ctx context.Context, code string, opts *exe
 	}
 
 	if result.Stdout != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStdout,
 			Data:      result.Stdout,
 			Timestamp: time.Now(),
@@ -139,14 +139,14 @@ func (i *MockInstance) ExecuteStream(ctx context.Context, code string, opts *exe
 	}
 
 	if result.Stderr != "" {
-		handler(&executor.StreamEvent{
+		_ = handler(&executor.StreamEvent{
 			Type:      executor.StreamStderr,
 			Data:      result.Stderr,
 			Timestamp: time.Now(),
 		})
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  result.ExitCode,
 		Timestamp: time.Now(),

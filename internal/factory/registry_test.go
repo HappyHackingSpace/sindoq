@@ -230,8 +230,8 @@ func TestRegistryClose(t *testing.T) {
 	})
 
 	// Create providers to cache them
-	r.Get("one", nil)
-	r.Get("two", nil)
+	_, _ = r.Get("one", nil)
+	_, _ = r.Get("two", nil)
 
 	err := r.Close()
 	if err != nil {

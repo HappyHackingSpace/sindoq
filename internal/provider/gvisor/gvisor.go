@@ -80,7 +80,6 @@ func DefaultConfig() *Config {
 type Provider struct {
 	config *Config
 	client *client.Client
-	mu     sync.RWMutex
 }
 
 // New creates a new gVisor provider.
@@ -178,7 +177,7 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 
 	// Start container
 	if err := p.client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		p.client.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
+		_ = p.client.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
 		return nil, fmt.Errorf("start container: %w", err)
 	}
 
@@ -202,7 +201,7 @@ func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
 	if err != nil {
 		return fmt.Errorf("pull image: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	_, err = io.Copy(io.Discard, reader)
 	return err
@@ -314,13 +313,17 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := append(runtimeInfo.CompileCmd, codePath)
+		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileCmd, runtimeInfo.CompileCmd)
+		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return nil, fmt.Errorf("compile: %w", err)
 		}
 		cmd = runtimeInfo.RunCommand
 	} else {
-		cmd = append(runtimeInfo.RunCommand, codePath)
+		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(cmd, runtimeInfo.RunCommand)
+		cmd[len(runtimeInfo.RunCommand)] = codePath
 	}
 
 	execCtx := ctx
@@ -370,8 +373,8 @@ func (i *Instance) runExec(ctx context.Context, cmd []string, opts *executor.Exe
 
 	if opts.Stdin != "" {
 		go func() {
-			resp.Conn.Write([]byte(opts.Stdin))
-			resp.CloseWrite()
+			_, _ = resp.Conn.Write([]byte(opts.Stdin))
+			_ = resp.CloseWrite()
 		}()
 	}
 
@@ -399,7 +402,7 @@ func (i *Instance) writeFile(ctx context.Context, path string, content []byte) e
 	if err := tw.WriteFile(path, content); err != nil {
 		return err
 	}
-	tw.Close()
+	_ = tw.Close()
 
 	dir := path[:strings.LastIndex(path, "/")]
 	if dir == "" {
@@ -439,13 +442,17 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := append(runtimeInfo.CompileCmd, codePath)
+		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
+		copy(compileCmd, runtimeInfo.CompileCmd)
+		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return fmt.Errorf("compile: %w", err)
 		}
 		cmd = runtimeInfo.RunCommand
 	} else {
-		cmd = append(runtimeInfo.RunCommand, codePath)
+		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
+		copy(cmd, runtimeInfo.RunCommand)
+		cmd[len(runtimeInfo.RunCommand)] = codePath
 	}
 
 	execConfig := container.ExecOptions{
@@ -470,9 +477,9 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	stderrReader, stderrWriter := io.Pipe()
 
 	go func() {
-		stdcopy.StdCopy(stdoutWriter, stderrWriter, resp.Reader)
-		stdoutWriter.Close()
-		stderrWriter.Close()
+		_, _ = stdcopy.StdCopy(stdoutWriter, stderrWriter, resp.Reader)
+		_ = stdoutWriter.Close()
+		_ = stderrWriter.Close()
 	}()
 
 	var wg sync.WaitGroup
@@ -484,7 +491,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stdoutReader.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStdout,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -502,7 +509,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		for {
 			n, err := stderrReader.Read(buf)
 			if n > 0 {
-				handler(&executor.StreamEvent{
+				_ = handler(&executor.StreamEvent{
 					Type:      executor.StreamStderr,
 					Data:      string(buf[:n]),
 					Timestamp: time.Now(),
@@ -521,7 +528,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		return fmt.Errorf("inspect exec: %w", err)
 	}
 
-	handler(&executor.StreamEvent{
+	_ = handler(&executor.StreamEvent{
 		Type:      executor.StreamComplete,
 		ExitCode:  inspectResp.ExitCode,
 		Timestamp: time.Now(),

@@ -38,7 +38,7 @@ func (n *vercelNetwork) PublishPort(ctx context.Context, port int) (*provider.Pu
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		bodyBytes, _ := io.ReadAll(resp.Body)
@@ -94,7 +94,7 @@ func (n *vercelNetwork) ListPorts(ctx context.Context) ([]*provider.PublishedPor
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		// Return cached ports
@@ -140,7 +140,7 @@ func (n *vercelNetwork) UnpublishPort(ctx context.Context, port int) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if n.ports != nil {
 		delete(n.ports, port)
