@@ -7,8 +7,8 @@ toolchain go1.26.9
 require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/firecracker-microvm/firecracker-go-sdk v1.0.0
-	github.com/go-enry/go-enry/v2 v2.9.4
-	github.com/landlock-lsm/go-landlock v0.7.0
+	github.com/go-enry/go-enry/v2 v2.9.6
+	github.com/landlock-lsm/go-landlock v0.10.1
 	github.com/moby/moby/api v1.56.1
 	github.com/moby/moby/client v0.6.1
 )
