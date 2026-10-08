@@ -292,14 +292,8 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 		return result, nil
 	}
 
-	// Fallback: execute via serial console (limited functionality)
-	result, err := i.executeViaSerial(ctx, code, runtimeInfo, opts)
-	if err != nil {
-		return nil, err
-	}
-	result.Duration = time.Since(start)
-	result.Language = opts.Language
-	return result, nil
+	// Serial console execution is not implemented yet and always returns an error.
+	return i.executeViaSerial(ctx, code, runtimeInfo, opts)
 }
 
 // executeViaSSH runs code through SSH connection to the VM.

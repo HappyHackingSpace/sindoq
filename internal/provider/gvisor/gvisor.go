@@ -16,10 +16,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"github.com/happyhackingspace/sindoq/internal/factory"
 	"github.com/happyhackingspace/sindoq/internal/provider"
@@ -88,15 +87,13 @@ func New(cfg *Config) (*Provider, error) {
 		cfg = DefaultConfig()
 	}
 
-	opts := []client.Opt{
-		client.WithAPIVersionNegotiation(),
-	}
+	var opts []client.Opt
 
 	if cfg.DockerHost != "" {
 		opts = append(opts, client.WithHost(cfg.DockerHost))
 	}
 
-	cli, err := client.NewClientWithOpts(opts...)
+	cli, err := client.New(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("create docker client: %w", err)
 	}
@@ -170,14 +167,14 @@ func (p *Provider) Create(ctx context.Context, opts *provider.CreateOptions) (pr
 	}
 
 	// Create container
-	resp, err := p.client.ContainerCreate(ctx, containerConfig, hostConfig, nil, nil, "")
+	resp, err := p.client.ContainerCreate(ctx, client.ContainerCreateOptions{Config: containerConfig, HostConfig: hostConfig})
 	if err != nil {
 		return nil, fmt.Errorf("create container: %w", err)
 	}
 
 	// Start container
-	if err := p.client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		_ = p.client.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true})
+	if _, err := p.client.ContainerStart(ctx, resp.ID, client.ContainerStartOptions{}); err != nil {
+		_, _ = p.client.ContainerRemove(ctx, resp.ID, client.ContainerRemoveOptions{Force: true})
 		return nil, fmt.Errorf("start container: %w", err)
 	}
 
@@ -197,7 +194,7 @@ func (p *Provider) ensureImage(ctx context.Context, imageName string) error {
 		return nil
 	}
 
-	reader, err := p.client.ImagePull(ctx, imageName, image.PullOptions{})
+	reader, err := p.client.ImagePull(ctx, imageName, client.ImagePullOptions{})
 	if err != nil {
 		return fmt.Errorf("pull image: %w", err)
 	}
@@ -229,18 +226,18 @@ func (p *Provider) Validate(ctx context.Context) error {
 	}
 
 	// Check Docker is available
-	if _, err := p.client.Ping(ctx); err != nil {
+	if _, err := p.client.Ping(ctx, client.PingOptions{}); err != nil {
 		return fmt.Errorf("docker not available: %w", err)
 	}
 
 	// Check if runsc runtime is configured in Docker
-	info, err := p.client.Info(ctx)
+	info, err := p.client.Info(ctx, client.InfoOptions{})
 	if err != nil {
 		return fmt.Errorf("get docker info: %w", err)
 	}
 
 	runtimeFound := false
-	for name := range info.Runtimes {
+	for name := range info.Info.Runtimes {
 		if name == p.config.RuntimeName {
 			runtimeFound = true
 			break
@@ -348,7 +345,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 
 // runExec runs a command in the container.
 func (i *Instance) runExec(ctx context.Context, cmd []string, opts *executor.ExecutionOptions) (*executor.ExecutionResult, error) {
-	execConfig := container.ExecOptions{
+	execConfig := client.ExecCreateOptions{
 		Cmd:          cmd,
 		WorkingDir:   opts.WorkDir,
 		AttachStdout: true,
@@ -360,12 +357,12 @@ func (i *Instance) runExec(ctx context.Context, cmd []string, opts *executor.Exe
 		execConfig.Env = append(execConfig.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	execID, err := i.client.ContainerExecCreate(ctx, i.id, execConfig)
+	execID, err := i.client.ExecCreate(ctx, i.id, execConfig)
 	if err != nil {
 		return nil, fmt.Errorf("create exec: %w", err)
 	}
 
-	resp, err := i.client.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
+	resp, err := i.client.ExecAttach(ctx, execID.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("attach exec: %w", err)
 	}
@@ -383,7 +380,7 @@ func (i *Instance) runExec(ctx context.Context, cmd []string, opts *executor.Exe
 		return nil, fmt.Errorf("read output: %w", err)
 	}
 
-	inspectResp, err := i.client.ContainerExecInspect(ctx, execID.ID)
+	inspectResp, err := i.client.ExecInspect(ctx, execID.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("inspect exec: %w", err)
 	}
@@ -409,7 +406,8 @@ func (i *Instance) writeFile(ctx context.Context, path string, content []byte) e
 		dir = "/"
 	}
 
-	return i.client.CopyToContainer(ctx, i.id, dir, &buf, container.CopyToContainerOptions{})
+	_, err := i.client.CopyToContainer(ctx, i.id, client.CopyToContainerOptions{DestinationPath: dir, Content: &buf})
+	return err
 }
 
 // ExecuteStream runs code with streaming output.
@@ -455,19 +453,19 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 		cmd[len(runtimeInfo.RunCommand)] = codePath
 	}
 
-	execConfig := container.ExecOptions{
+	execConfig := client.ExecCreateOptions{
 		Cmd:          cmd,
 		WorkingDir:   opts.WorkDir,
 		AttachStdout: true,
 		AttachStderr: true,
 	}
 
-	execID, err := i.client.ContainerExecCreate(ctx, i.id, execConfig)
+	execID, err := i.client.ExecCreate(ctx, i.id, execConfig)
 	if err != nil {
 		return fmt.Errorf("create exec: %w", err)
 	}
 
-	resp, err := i.client.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
+	resp, err := i.client.ExecAttach(ctx, execID.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return fmt.Errorf("attach exec: %w", err)
 	}
@@ -523,7 +521,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 
 	wg.Wait()
 
-	inspectResp, err := i.client.ContainerExecInspect(ctx, execID.ID)
+	inspectResp, err := i.client.ExecInspect(ctx, execID.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("inspect exec: %w", err)
 	}
@@ -548,20 +546,20 @@ func (i *Instance) RunCommand(ctx context.Context, cmd string, args []string) (*
 
 	fullCmd := append([]string{cmd}, args...)
 
-	execConfig := container.ExecOptions{
+	execConfig := client.ExecCreateOptions{
 		Cmd:          fullCmd,
 		AttachStdout: true,
 		AttachStderr: true,
 	}
 
-	execID, err := i.client.ContainerExecCreate(ctx, i.id, execConfig)
+	execID, err := i.client.ExecCreate(ctx, i.id, execConfig)
 	if err != nil {
 		return nil, fmt.Errorf("create exec: %w", err)
 	}
 
 	start := time.Now()
 
-	resp, err := i.client.ContainerExecAttach(ctx, execID.ID, container.ExecAttachOptions{})
+	resp, err := i.client.ExecAttach(ctx, execID.ID, client.ExecAttachOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("attach exec: %w", err)
 	}
@@ -572,7 +570,7 @@ func (i *Instance) RunCommand(ctx context.Context, cmd string, args []string) (*
 		return nil, fmt.Errorf("read output: %w", err)
 	}
 
-	inspectResp, err := i.client.ContainerExecInspect(ctx, execID.ID)
+	inspectResp, err := i.client.ExecInspect(ctx, execID.ID, client.ExecInspectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("inspect exec: %w", err)
 	}
@@ -605,13 +603,13 @@ func (i *Instance) Stop(ctx context.Context) error {
 	i.stopped = true
 	i.mu.Unlock()
 
-	if err := i.client.ContainerStop(ctx, i.id, container.StopOptions{}); err != nil {
+	if _, err := i.client.ContainerStop(ctx, i.id, client.ContainerStopOptions{}); err != nil {
 		if !strings.Contains(err.Error(), "No such container") {
 			return fmt.Errorf("stop container: %w", err)
 		}
 	}
 
-	if err := i.client.ContainerRemove(ctx, i.id, container.RemoveOptions{Force: true}); err != nil {
+	if _, err := i.client.ContainerRemove(ctx, i.id, client.ContainerRemoveOptions{Force: true}); err != nil {
 		if !strings.Contains(err.Error(), "No such container") {
 			return fmt.Errorf("remove container: %w", err)
 		}
@@ -629,15 +627,15 @@ func (i *Instance) Status(ctx context.Context) (provider.InstanceStatus, error) 
 	}
 	i.mu.RUnlock()
 
-	info, err := i.client.ContainerInspect(ctx, i.id)
+	info, err := i.client.ContainerInspect(ctx, i.id, client.ContainerInspectOptions{})
 	if err != nil {
 		return provider.StatusError, err
 	}
 
-	if info.State.Running {
+	if info.Container.State.Running {
 		return provider.StatusRunning, nil
 	}
-	if info.State.Paused {
+	if info.Container.State.Paused {
 		return provider.StatusPaused, nil
 	}
 

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/happyhackingspace/sindoq/pkg/fs"
+	"github.com/moby/moby/client"
 )
 
 // dockerFS implements fs.FileSystem for Docker containers.
@@ -22,14 +22,14 @@ type dockerFS struct {
 
 // Read reads file contents.
 func (d *dockerFS) Read(ctx context.Context, path string) ([]byte, error) {
-	reader, _, err := d.instance.client.CopyFromContainer(ctx, d.instance.id, path)
+	res, err := d.instance.client.CopyFromContainer(ctx, d.instance.id, client.CopyFromContainerOptions{SourcePath: path})
 	if err != nil {
 		return nil, fmt.Errorf("copy from container: %w", err)
 	}
-	defer func() { _ = reader.Close() }()
+	defer func() { _ = res.Content.Close() }()
 
 	// Extract from tar
-	tr := tar.NewReader(reader)
+	tr := tar.NewReader(res.Content)
 	_, err = tr.Next()
 	if err != nil {
 		return nil, fmt.Errorf("read tar header: %w", err)
@@ -52,7 +52,8 @@ func (d *dockerFS) Write(ctx context.Context, path string, data []byte) error {
 		dir = "/"
 	}
 
-	return d.instance.client.CopyToContainer(ctx, d.instance.id, dir, &buf, container.CopyToContainerOptions{})
+	_, err := d.instance.client.CopyToContainer(ctx, d.instance.id, client.CopyToContainerOptions{DestinationPath: dir, Content: &buf})
+	return err
 }
 
 // Delete removes a file or directory.
