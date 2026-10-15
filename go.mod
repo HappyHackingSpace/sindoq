@@ -10,7 +10,7 @@ require (
 	github.com/go-enry/go-enry/v2 v2.9.6
 	github.com/landlock-lsm/go-landlock v0.10.1
 	github.com/moby/moby/api v1.56.1
-	github.com/moby/moby/client v0.6.1
+	github.com/moby/moby/client v0.6.2
 )
 
 require (
@@ -21,7 +21,7 @@ require (
 	github.com/containernetworking/cni v1.3.0 // indirect
 	github.com/containernetworking/plugins v1.9.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/go-connections v0.8.1 // indirect
+	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-enry/go-oniguruma v1.2.1 // indirect
