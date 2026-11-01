@@ -231,7 +231,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	codePathInWorkspace := filepath.Join(i.workDir, codeFilename)
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := i.buildSeatbeltCmd(append(runtimeInfo.CompileCmd, codePathInWorkspace))
+		compileCmd := i.buildSeatbeltCmd(langdetect.ResolveCompileCommand(runtimeInfo, codePathInWorkspace))
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		compileExec.Dir = i.workDir
 		if output, err := compileExec.CombinedOutput(); err != nil {
@@ -241,7 +241,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 				Language: opts.Language,
 			}, nil
 		}
-		runCmd = i.buildSeatbeltCmd(runtimeInfo.RunCommand)
+		runCmd = i.buildSeatbeltCmd(langdetect.ResolveRunCommand(runtimeInfo, codePathInWorkspace))
 	} else {
 		runCmd = i.buildSeatbeltCmd(append(runtimeInfo.RunCommand, codePathInWorkspace))
 	}
@@ -415,7 +415,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	codePathInWorkspace := filepath.Join(i.workDir, codeFilename)
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := i.buildSeatbeltCmd(append(runtimeInfo.CompileCmd, codePathInWorkspace))
+		compileCmd := i.buildSeatbeltCmd(langdetect.ResolveCompileCommand(runtimeInfo, codePathInWorkspace))
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		compileExec.Dir = i.workDir
 		compileExec.Env = i.buildEnv(opts)
@@ -432,7 +432,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 			})
 			return nil
 		}
-		runCmd = i.buildSeatbeltCmd(runtimeInfo.RunCommand)
+		runCmd = i.buildSeatbeltCmd(langdetect.ResolveRunCommand(runtimeInfo, codePathInWorkspace))
 	} else {
 		runCmd = i.buildSeatbeltCmd(append(runtimeInfo.RunCommand, codePathInWorkspace))
 	}

@@ -270,7 +270,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
 		// For compiled languages, compile first then run
-		compileCmd := i.buildNsjailCmd(append(runtimeInfo.CompileCmd, sandboxCodePath), opts)
+		compileCmd := i.buildNsjailCmd(langdetect.ResolveCompileCommand(runtimeInfo, sandboxCodePath), opts)
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		if output, err := compileExec.CombinedOutput(); err != nil {
 			return &executor.ExecutionResult{
@@ -279,7 +279,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 				Language: opts.Language,
 			}, nil
 		}
-		runCmd = i.buildNsjailCmd(runtimeInfo.RunCommand, opts)
+		runCmd = i.buildNsjailCmd(langdetect.ResolveRunCommand(runtimeInfo, sandboxCodePath), opts)
 	} else {
 		runCmd = i.buildNsjailCmd(append(runtimeInfo.RunCommand, sandboxCodePath), opts)
 	}
@@ -434,7 +434,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	sandboxCodePath := "/workspace/" + codeFilename
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := i.buildNsjailCmd(append(runtimeInfo.CompileCmd, sandboxCodePath), opts)
+		compileCmd := i.buildNsjailCmd(langdetect.ResolveCompileCommand(runtimeInfo, sandboxCodePath), opts)
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		if output, err := compileExec.CombinedOutput(); err != nil {
 			_ = handler(&executor.StreamEvent{
@@ -449,7 +449,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 			})
 			return nil
 		}
-		runCmd = i.buildNsjailCmd(runtimeInfo.RunCommand, opts)
+		runCmd = i.buildNsjailCmd(langdetect.ResolveRunCommand(runtimeInfo, sandboxCodePath), opts)
 	} else {
 		runCmd = i.buildNsjailCmd(append(runtimeInfo.RunCommand, sandboxCodePath), opts)
 	}
