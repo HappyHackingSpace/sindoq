@@ -289,6 +289,42 @@ sindoq -detect 'fn main() { println!("Hello"); }'
 sindoq -list-languages
 ```
 
+## MCP Server
+
+`sindoq-mcp` exposes sindoq to AI agents over the [Model Context Protocol](https://modelcontextprotocol.io) (stdio transport), so assistants like Claude can run untrusted code in a sandbox instead of on the host.
+
+```bash
+go install github.com/happyhackingspace/sindoq/cmd/sindoq-mcp@latest
+```
+
+Tools:
+
+| Tool | Inputs | Result |
+|------|--------|--------|
+| `execute_code` | `code` (required), `language`, `provider`, `timeout_seconds` | exit code, stdout, stderr, duration, language |
+| `list_providers` | — | provider names available on this host |
+| `list_languages` | — | languages sindoq can execute |
+
+Each `execute_code` call runs in a fresh sandbox (default provider: docker) that is stopped when the execution finishes. The language is auto-detected when omitted.
+
+Claude Code:
+
+```bash
+claude mcp add sindoq -- sindoq-mcp
+```
+
+Claude Desktop (`claude_desktop_config.json`) or any client with an `mcpServers` config:
+
+```json
+{
+  "mcpServers": {
+    "sindoq": {
+      "command": "sindoq-mcp"
+    }
+  }
+}
+```
+
 ## API Reference
 
 ### Sandbox Interface
