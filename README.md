@@ -91,7 +91,7 @@
 
 ## Features
 
-- **Multi-provider support**: Docker, Podman, Wasmer, nsjail, gVisor, Firecracker, Landlock, Seatbelt, Kubernetes, Vercel, E2B
+- **Multi-provider support**: Docker, Podman, Wasmer, nsjail, gVisor, Firecracker, Landlock, Seatbelt, microsandbox, Kubernetes, Vercel, E2B
 - **Auto language detection**: Automatically detects programming language from code
 - **Streaming output**: Real-time stdout/stderr streaming
 - **Async execution**: Non-blocking execution with channels
@@ -163,6 +163,7 @@ fmt.Println(result.Stdout)
 | `firecracker` | Local | Maximum isolation (microVMs, Linux only) |
 | `landlock` | Local | Kernel-level sandboxing via Landlock LSM (Linux 5.13+) |
 | `seatbelt` | Local | Kernel-level sandboxing via sandbox-exec (macOS) |
+| `microsandbox` | Local | Hardware-isolated microVMs from OCI images (macOS Apple Silicon, Linux KVM); opt-in build tag |
 | `kubernetes` | Cloud | Scalable workloads |
 | `vercel` | Cloud | Serverless execution |
 | `e2b` | Cloud | AI code interpreter |
@@ -200,7 +201,27 @@ sb, _ := sindoq.Create(ctx, sindoq.WithSeatbeltConfig(sindoq.SeatbeltConfig{
 sb, _ := sindoq.Create(ctx, sindoq.WithLandlockConfig(sindoq.LandlockConfig{
     BestEffort: true,
 }))
+
+// microsandbox (requires -tags microsandbox, see below)
+sb, _ := sindoq.Create(ctx, sindoq.WithMicrosandboxConfig(sindoq.MicrosandboxConfig{
+    DefaultImage: "python:3.12-slim",
+}))
 ```
+
+### microsandbox Provider
+
+[microsandbox](https://github.com/superradcompany/microsandbox) runs each sandbox in its own microVM with a guest kernel, booted from a standard OCI image. Its Go SDK embeds a ~26-36 MB native library and needs cgo, so the provider is opt-in:
+
+```bash
+go build -tags microsandbox ./...
+go install -tags microsandbox github.com/happyhackingspace/sindoq/cmd/sindoq@latest
+sindoq -provider microsandbox 'print("Hello from a microVM!")'
+```
+
+- Requires macOS on Apple Silicon or Linux with KVM, plus a C toolchain (`CGO_ENABLED=1`).
+- On first use the msb runtime is downloaded to `~/.microsandbox/` (set `SkipRuntimeInstall: true` to require a preinstalled runtime). The first sandbox per image also pulls the image.
+- The image is picked from `WithImage`, else the per-language default of `WithRuntime`, same as Docker. Without `WithInternetAccess()` the VM gets a deny-all network policy. Sandboxes are ephemeral and removed on `Stop`.
+- Integration tests: `go test -tags 'microsandbox integration' ./internal/provider/microsandbox/ .`
 
 ## Configuration Options
 

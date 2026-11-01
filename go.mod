@@ -11,6 +11,7 @@ require (
 	github.com/landlock-lsm/go-landlock v0.10.1
 	github.com/moby/moby/api v1.56.1
 	github.com/moby/moby/client v0.6.2
+	github.com/superradcompany/microsandbox/sdk/go v0.7.11
 )
 
 require (

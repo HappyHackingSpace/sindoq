@@ -175,6 +175,15 @@ func WithSeatbeltConfig(cfg SeatbeltConfig) Option {
 	}
 }
 
+// WithMicrosandboxConfig configures microsandbox provider.
+// The provider is only available in binaries built with -tags microsandbox and cgo.
+func WithMicrosandboxConfig(cfg MicrosandboxConfig) Option {
+	return func(c *Config) {
+		c.Provider = "microsandbox"
+		c.ProviderConfig = cfg
+	}
+}
+
 // WithTimeout sets the default execution timeout.
 func WithTimeout(d time.Duration) Option {
 	return func(c *Config) {
@@ -469,6 +478,17 @@ type SeatbeltConfig struct {
 
 	// CustomProfile is an optional full SBPL profile string that overrides generation.
 	CustomProfile string
+}
+
+// MicrosandboxConfig configures microsandbox provider.
+// microsandbox requires macOS on Apple Silicon or Linux with KVM.
+type MicrosandboxConfig struct {
+	// DefaultImage is the OCI image used when neither an image nor a runtime is set.
+	DefaultImage string
+
+	// SkipRuntimeInstall disables downloading the msb runtime to ~/.microsandbox
+	// on first use. The runtime must then already be installed.
+	SkipRuntimeInstall bool
 }
 
 // ExecuteOption configures a single execution.
