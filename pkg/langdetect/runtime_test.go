@@ -168,7 +168,7 @@ func TestNeedsCompilation(t *testing.T) {
 		{"JavaScript", false},
 		{"Go", false}, // go run handles compilation
 		{"Rust", true},
-		{"Java", true},
+		{"Java", false}, // single-file source launch, see #36
 		{"C", true},
 		{"C++", true},
 		{"Unknown", false},
@@ -249,4 +249,37 @@ func sliceEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// TestJavaUsesSingleFileSourceLaunch guards against regressing #36: Java must
+// be treated as interpreted (no compile step) so providers append the source
+// file to `java` and use single-file source launch.
+func TestJavaUsesSingleFileSourceLaunch(t *testing.T) {
+	info, ok := GetRuntimeInfo("Java")
+	if !ok {
+		t.Fatal("Java runtime info not found")
+	}
+	if info.CompileCmd != nil {
+		t.Errorf("Java CompileCmd = %v, want nil (single-file source launch)", info.CompileCmd)
+	}
+	if len(info.RunCommand) != 1 || info.RunCommand[0] != "java" {
+		t.Errorf("Java RunCommand = %v, want [java]", info.RunCommand)
+	}
+	if NeedsCompilation("Java") {
+		t.Error("NeedsCompilation(Java) = true, want false")
+	}
+}
+
+// TestCompiledLanguagesRunTheirOwnBinary documents the contract the providers
+// rely on: a language with a compile step must carry the output binary path in
+// RunCommand, because providers do not append anything after compiling.
+func TestCompiledLanguagesRunTheirOwnBinary(t *testing.T) {
+	for name, info := range DefaultRuntimes {
+		if info.CompileCmd == nil {
+			continue
+		}
+		if len(info.RunCommand) == 0 || info.RunCommand[0] == info.Runtime {
+			t.Errorf("%s: RunCommand %v does not point at the compiled output; providers append nothing after the compile step", name, info.RunCommand)
+		}
+	}
 }
