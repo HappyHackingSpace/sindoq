@@ -325,11 +325,8 @@ func (i *Instance) executeViaSSH(ctx context.Context, code string, runtimeInfo *
 	var runCmd string
 	codePath := "/tmp/" + codeFilename
 	if runtimeInfo.CompileCmd != nil {
-		compileParts := make([]string, len(runtimeInfo.CompileCmd)+1)
-		copy(compileParts, runtimeInfo.CompileCmd)
-		compileParts[len(runtimeInfo.CompileCmd)] = codePath
-		compileCmd := strings.Join(compileParts, " ")
-		execCmd := strings.Join(runtimeInfo.RunCommand, " ")
+		compileCmd := strings.Join(langdetect.ResolveCompileCommand(runtimeInfo, codePath), " ")
+		execCmd := strings.Join(langdetect.ResolveRunCommand(runtimeInfo, codePath), " ")
 		runCmd = fmt.Sprintf("%s && %s", compileCmd, execCmd)
 	} else {
 		runParts := make([]string, len(runtimeInfo.RunCommand)+1)
@@ -433,11 +430,8 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	var runCmd string
 	streamCodePath := "/tmp/" + codeFilename
 	if runtimeInfo.CompileCmd != nil {
-		compileParts := make([]string, len(runtimeInfo.CompileCmd)+1)
-		copy(compileParts, runtimeInfo.CompileCmd)
-		compileParts[len(runtimeInfo.CompileCmd)] = streamCodePath
-		compileCmd := strings.Join(compileParts, " ")
-		execCmd := strings.Join(runtimeInfo.RunCommand, " ")
+		compileCmd := strings.Join(langdetect.ResolveCompileCommand(runtimeInfo, streamCodePath), " ")
+		execCmd := strings.Join(langdetect.ResolveRunCommand(runtimeInfo, streamCodePath), " ")
 		runCmd = fmt.Sprintf("%s && %s", compileCmd, execCmd)
 	} else {
 		runParts := make([]string, len(runtimeInfo.RunCommand)+1)

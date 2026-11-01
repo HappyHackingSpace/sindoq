@@ -310,13 +310,11 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
-		copy(compileCmd, runtimeInfo.CompileCmd)
-		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
+		compileCmd := langdetect.ResolveCompileCommand(runtimeInfo, codePath)
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return nil, fmt.Errorf("compile: %w", err)
 		}
-		cmd = runtimeInfo.RunCommand
+		cmd = langdetect.ResolveRunCommand(runtimeInfo, codePath)
 	} else {
 		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
 		copy(cmd, runtimeInfo.RunCommand)
@@ -440,13 +438,11 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 
 	var cmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := make([]string, len(runtimeInfo.CompileCmd)+1)
-		copy(compileCmd, runtimeInfo.CompileCmd)
-		compileCmd[len(runtimeInfo.CompileCmd)] = codePath
+		compileCmd := langdetect.ResolveCompileCommand(runtimeInfo, codePath)
 		if _, err := i.runExec(ctx, compileCmd, opts); err != nil {
 			return fmt.Errorf("compile: %w", err)
 		}
-		cmd = runtimeInfo.RunCommand
+		cmd = langdetect.ResolveRunCommand(runtimeInfo, codePath)
 	} else {
 		cmd = make([]string, len(runtimeInfo.RunCommand)+1)
 		copy(cmd, runtimeInfo.RunCommand)

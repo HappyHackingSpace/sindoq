@@ -1,8 +1,15 @@
 package langdetect
 
 import (
+	"path"
 	"strings"
 )
+
+// OutputBinaryPlaceholder marks where the per-execution compile output path
+// goes in CompileCmd and RunCommand. Providers resolve it with
+// ResolveCompileCommand and ResolveRunCommand so concurrent executions never
+// share a fixed output path (see issue #37).
+const OutputBinaryPlaceholder = "{{output}}"
 
 // RuntimeInfo maps languages to execution details.
 type RuntimeInfo struct {
@@ -74,8 +81,8 @@ var DefaultRuntimes = map[string]*RuntimeInfo{
 		Aliases:     []string{"rust", "rs"},
 		Runtime:     "rustc",
 		FileExt:     ".rs",
-		CompileCmd:  []string{"rustc", "-o", "/tmp/main"},
-		RunCommand:  []string{"/tmp/main"},
+		CompileCmd:  []string{"rustc", "-o", OutputBinaryPlaceholder},
+		RunCommand:  []string{OutputBinaryPlaceholder},
 		DockerImage: "rust:1.75-slim",
 		REPLMode:    false,
 	},
@@ -94,8 +101,8 @@ var DefaultRuntimes = map[string]*RuntimeInfo{
 		Aliases:     []string{"c"},
 		Runtime:     "gcc",
 		FileExt:     ".c",
-		CompileCmd:  []string{"gcc", "-o", "/tmp/main"},
-		RunCommand:  []string{"/tmp/main"},
+		CompileCmd:  []string{"gcc", "-o", OutputBinaryPlaceholder},
+		RunCommand:  []string{OutputBinaryPlaceholder},
 		DockerImage: "gcc:14",
 		REPLMode:    false,
 	},
@@ -104,8 +111,8 @@ var DefaultRuntimes = map[string]*RuntimeInfo{
 		Aliases:     []string{"cpp", "c++", "cxx"},
 		Runtime:     "g++",
 		FileExt:     ".cpp",
-		CompileCmd:  []string{"g++", "-o", "/tmp/main"},
-		RunCommand:  []string{"/tmp/main"},
+		CompileCmd:  []string{"g++", "-o", OutputBinaryPlaceholder},
+		RunCommand:  []string{OutputBinaryPlaceholder},
 		DockerImage: "gcc:14",
 		REPLMode:    false,
 	},
@@ -288,6 +295,47 @@ func NeedsCompilation(language string) bool {
 		return info.CompileCmd != nil
 	}
 	return false
+}
+
+// CompileOutputPath returns the per-execution compile output path for the
+// source file at codePath: a "main" binary in the same directory. Paths are
+// sandbox-internal and always slash-separated.
+func CompileOutputPath(codePath string) string {
+	return path.Join(path.Dir(codePath), "main")
+}
+
+// ResolveCompileCommand returns CompileCmd ready to run for the source file at
+// codePath: the output placeholder is replaced with CompileOutputPath(codePath)
+// and the source path is appended. It returns nil when the language has no
+// compile step.
+func ResolveCompileCommand(info *RuntimeInfo, codePath string) []string {
+	if info.CompileCmd == nil {
+		return nil
+	}
+	resolved := make([]string, 0, len(info.CompileCmd)+1)
+	for _, arg := range info.CompileCmd {
+		if arg == OutputBinaryPlaceholder {
+			arg = CompileOutputPath(codePath)
+		}
+		resolved = append(resolved, arg)
+	}
+	return append(resolved, codePath)
+}
+
+// ResolveRunCommand returns RunCommand with the output placeholder replaced by
+// CompileOutputPath(codePath). Commands without the placeholder (interpreted
+// languages, and compiled languages that do not run a produced binary) are
+// returned as a copy, unchanged; for interpreted languages providers still
+// append the source path themselves.
+func ResolveRunCommand(info *RuntimeInfo, codePath string) []string {
+	resolved := make([]string, len(info.RunCommand))
+	for idx, arg := range info.RunCommand {
+		if arg == OutputBinaryPlaceholder {
+			arg = CompileOutputPath(codePath)
+		}
+		resolved[idx] = arg
+	}
+	return resolved
 }
 
 // SupportedLanguages returns all supported language names.

@@ -370,7 +370,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 	codePathOnHost := filepath.Join(i.workDir, codeFilename)
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := i.buildLandlockCmd(append(runtimeInfo.CompileCmd, codePathOnHost))
+		compileCmd := i.buildLandlockCmd(langdetect.ResolveCompileCommand(runtimeInfo, codePathOnHost))
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		compileExec.Dir = i.workDir
 		compileExec.Env = i.buildEnv(opts)
@@ -381,7 +381,7 @@ func (i *Instance) Execute(ctx context.Context, code string, opts *executor.Exec
 				Language: opts.Language,
 			}, nil
 		}
-		runCmd = i.buildLandlockCmd(runtimeInfo.RunCommand)
+		runCmd = i.buildLandlockCmd(langdetect.ResolveRunCommand(runtimeInfo, codePathOnHost))
 	} else {
 		runCmd = i.buildLandlockCmd(append(runtimeInfo.RunCommand, codePathOnHost))
 	}
@@ -507,7 +507,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 	codePathOnHost := filepath.Join(i.workDir, codeFilename)
 	var runCmd []string
 	if runtimeInfo.CompileCmd != nil {
-		compileCmd := i.buildLandlockCmd(append(runtimeInfo.CompileCmd, codePathOnHost))
+		compileCmd := i.buildLandlockCmd(langdetect.ResolveCompileCommand(runtimeInfo, codePathOnHost))
 		compileExec := exec.CommandContext(ctx, compileCmd[0], compileCmd[1:]...)
 		compileExec.Dir = i.workDir
 		compileExec.Env = i.buildEnv(opts)
@@ -524,7 +524,7 @@ func (i *Instance) ExecuteStream(ctx context.Context, code string, opts *executo
 			})
 			return nil
 		}
-		runCmd = i.buildLandlockCmd(runtimeInfo.RunCommand)
+		runCmd = i.buildLandlockCmd(langdetect.ResolveRunCommand(runtimeInfo, codePathOnHost))
 	} else {
 		runCmd = i.buildLandlockCmd(append(runtimeInfo.RunCommand, codePathOnHost))
 	}
