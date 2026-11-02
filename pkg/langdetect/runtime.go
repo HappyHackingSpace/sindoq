@@ -80,11 +80,14 @@ var DefaultRuntimes = map[string]*RuntimeInfo{
 		REPLMode:    false,
 	},
 	"Java": {
-		Language:    "Java",
-		Aliases:     []string{"java"},
-		Runtime:     "java",
-		FileExt:     ".java",
-		CompileCmd:  []string{"javac"},
+		Language: "Java",
+		Aliases:  []string{"java"},
+		Runtime:  "java",
+		FileExt:  ".java",
+		// No compile step: providers only append the source path for
+		// interpreted languages, so Java uses single-file source launch
+		// (java Main.java, Java 11+). With a compile step, the run command
+		// was a bare `java` with no class argument and always failed.
 		RunCommand:  []string{"java"},
 		DockerImage: "eclipse-temurin:21-jdk",
 		REPLMode:    false,
