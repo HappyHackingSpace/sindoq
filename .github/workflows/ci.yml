@@ -38,6 +38,7 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go build ./...
+      - run: CGO_ENABLED=1 go build -tags microsandbox ./...
 
   govulncheck:
     name: Govulncheck

@@ -126,6 +126,22 @@ func TestWithDockerConfig(t *testing.T) {
 	}
 }
 
+func TestWithMicrosandboxConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	WithMicrosandboxConfig(MicrosandboxConfig{DefaultImage: "alpine:3.19"})(cfg)
+
+	if cfg.Provider != "microsandbox" {
+		t.Errorf("Provider = %q, want %q", cfg.Provider, "microsandbox")
+	}
+	mc, ok := cfg.ProviderConfig.(MicrosandboxConfig)
+	if !ok {
+		t.Fatal("ProviderConfig should be MicrosandboxConfig")
+	}
+	if mc.DefaultImage != "alpine:3.19" {
+		t.Errorf("MicrosandboxConfig.DefaultImage = %q, want %q", mc.DefaultImage, "alpine:3.19")
+	}
+}
+
 func TestWithVercelConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	vercelCfg := VercelConfig{
